@@ -1,0 +1,215 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Hardened Global Helper Primitives
+    // -------------------------------------------------------------------------
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isVerifiedOwner(userId) {
+      return isEmailVerified() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isEmailVerified() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'chinmaylahoti33@gmail.com'
+      );
+    }
+
+    // -------------------------------------------------------------------------
+    // Entity Validation Blueprints (Synchronized with firebase-blueprint.json)
+    // -------------------------------------------------------------------------
+    function isValidUserPublicProfile(data) {
+      return data.keys().hasAll(['uid', 'displayName', 'role', 'bio', 'chapterOrInstitution', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'displayName', 'role', 'bio', 'chapterOrInstitution', 'updatedAt']) &&
+        isValidId(data.uid) &&
+        data.uid == request.auth.uid &&
+        data.displayName is string && data.displayName.size() >= 2 && data.displayName.size() <= 80 &&
+        data.role is string && data.role in ['reader', 'contributor', 'fellow'] &&
+        data.bio is string && data.bio.size() <= 500 &&
+        data.chapterOrInstitution is string && data.chapterOrInstitution.size() <= 120 &&
+        data.updatedAt is timestamp && data.updatedAt == request.time;
+    }
+
+    function isValidUserPrivateInfo(data) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'createdAt', 'updatedAt']) &&
+        isValidId(data.uid) &&
+        data.uid == request.auth.uid &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp && data.updatedAt == request.time;
+    }
+
+    function isValidSavedFolio(data) {
+      return data.keys().hasAll(['userId', 'itemId', 'itemType', 'title', 'seriesTitle', 'note', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['userId', 'itemId', 'itemType', 'title', 'seriesTitle', 'note', 'createdAt', 'updatedAt']) &&
+        isValidId(data.userId) &&
+        data.userId == request.auth.uid &&
+        isValidId(data.itemId) &&
+        data.itemType is string && data.itemType in ['article', 'chapter', 'resource'] &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+        data.seriesTitle is string && data.seriesTitle.size() >= 1 && data.seriesTitle.size() <= 120 &&
+        data.note is string && data.note.size() <= 1500 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp && data.updatedAt == request.time;
+    }
+
+    function isValidSubmissionRecord(data) {
+      return data.keys().hasAll(['userId', 'trackId', 'trackTitle', 'applicantName', 'institution', 'pitchText', 'status', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['userId', 'trackId', 'trackTitle', 'applicantName', 'institution', 'pitchText', 'status', 'createdAt', 'updatedAt']) &&
+        isValidId(data.userId) &&
+        data.userId == request.auth.uid &&
+        isValidId(data.trackId) && data.trackId.size() <= 80 &&
+        data.trackTitle is string && data.trackTitle.size() >= 1 && data.trackTitle.size() <= 140 &&
+        data.applicantName is string && data.applicantName.size() >= 2 && data.applicantName.size() <= 100 &&
+        data.institution is string && data.institution.size() <= 140 &&
+        data.pitchText is string && data.pitchText.size() >= 20 && data.pitchText.size() <= 4000 &&
+        data.status is string && data.status in ['submitted', 'under_review', 'accepted', 'archived'] &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp && data.updatedAt == request.time;
+    }
+
+    function isValidEventRegistration(data) {
+      return data.keys().hasAll(['userId', 'eventId', 'eventTitle', 'attendeeName', 'attendanceMode', 'questionNote', 'createdAt']) &&
+        data.keys().hasOnly(['userId', 'eventId', 'eventTitle', 'attendeeName', 'attendanceMode', 'questionNote', 'createdAt']) &&
+        isValidId(data.userId) &&
+        data.userId == request.auth.uid &&
+        isValidId(data.eventId) && data.eventId.size() <= 100 &&
+        data.eventTitle is string && data.eventTitle.size() >= 1 && data.eventTitle.size() <= 200 &&
+        data.attendeeName is string && data.attendeeName.size() >= 2 && data.attendeeName.size() <= 100 &&
+        data.attendanceMode is string && data.attendanceMode in ['Online Seminar Livestream', 'In-Person Salon Seat'] &&
+        data.questionNote is string && data.questionNote.size() <= 1000 &&
+        data.createdAt is timestamp && data.createdAt == request.time;
+    }
+
+    function isValidReadingProgress(data) {
+      return data.keys().hasAll(['userId', 'completedChallenges', 'updatedAt']) &&
+        data.keys().hasOnly(['userId', 'completedChallenges', 'updatedAt']) &&
+        isValidId(data.userId) &&
+        data.userId == request.auth.uid &&
+        data.completedChallenges is list &&
+        data.completedChallenges.size() <= 12 &&
+        (data.completedChallenges.size() == 0 || (data.completedChallenges[0] is string && data.completedChallenges[0].size() <= 160)) &&
+        data.updatedAt is timestamp && data.updatedAt == request.time;
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection Match Blocks
+    // -------------------------------------------------------------------------
+
+    match /users_public/{userId} {
+      allow get: if isValidId(userId) && isSignedIn();
+      allow list: if false;
+      allow create: if isValidId(userId) && isVerifiedOwner(userId) && isValidUserPublicProfile(incoming()) && incoming().role == 'reader';
+      allow update: if isValidId(userId) && (isAdmin() || (
+        isVerifiedOwner(userId) &&
+        isValidUserPublicProfile(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().role == existing().role &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'bio', 'chapterOrInstitution', 'updatedAt'])
+      ));
+      allow delete: if isValidId(userId) && (isVerifiedOwner(userId) || isAdmin());
+    }
+
+    match /users_private/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if false;
+      allow create: if isValidId(userId) && isVerifiedOwner(userId) && isValidUserPrivateInfo(incoming()) && incoming().createdAt == request.time;
+      allow update: if isValidId(userId) && isVerifiedOwner(userId) && isValidUserPrivateInfo(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['email', 'updatedAt']);
+      allow delete: if isValidId(userId) && (isVerifiedOwner(userId) || isAdmin());
+    }
+
+    match /saved_folios/{folioId} {
+      allow get: if isValidId(folioId) && (isOwner(existing().userId) || isAdmin());
+      allow list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isValidId(folioId) && isEmailVerified() && isValidSavedFolio(incoming()) && incoming().createdAt == request.time;
+      allow update: if isValidId(folioId) && isEmailVerified() && isOwner(existing().userId) && isValidSavedFolio(incoming()) &&
+        incoming().userId == existing().userId &&
+        incoming().itemId == existing().itemId &&
+        incoming().itemType == existing().itemType &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['note', 'updatedAt']);
+      allow delete: if isValidId(folioId) && (isOwner(existing().userId) || isAdmin());
+    }
+
+    match /submissions/{submissionId} {
+      allow get: if isValidId(submissionId) && (isOwner(existing().userId) || isAdmin());
+      allow list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isValidId(submissionId) && isEmailVerified() && isValidSubmissionRecord(incoming()) &&
+        incoming().status == 'submitted' &&
+        incoming().createdAt == request.time;
+      allow update: if isValidId(submissionId) && (isAdmin() || (
+        isEmailVerified() &&
+        isOwner(existing().userId) &&
+        existing().status == 'submitted' &&
+        isValidSubmissionRecord(incoming()) &&
+        incoming().userId == existing().userId &&
+        incoming().trackId == existing().trackId &&
+        incoming().status == existing().status &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['applicantName', 'institution', 'pitchText', 'updatedAt'])
+      ));
+      allow delete: if isValidId(submissionId) && ((isOwner(existing().userId) && existing().status == 'submitted') || isAdmin());
+    }
+
+    match /event_registrations/{registrationId} {
+      allow get: if isValidId(registrationId) && (isOwner(existing().userId) || isAdmin());
+      allow list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isValidId(registrationId) && isEmailVerified() && isValidEventRegistration(incoming()) && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isValidId(registrationId) && (isOwner(existing().userId) || isAdmin());
+    }
+
+    match /reading_progress/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if false;
+      allow create: if isValidId(userId) && isVerifiedOwner(userId) && isValidReadingProgress(incoming());
+      allow update: if isValidId(userId) && isVerifiedOwner(userId) && isValidReadingProgress(incoming()) &&
+        incoming().userId == existing().userId &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['completedChallenges', 'updatedAt']);
+      allow delete: if isValidId(userId) && (isVerifiedOwner(userId) || isAdmin());
+    }
+
+    match /admins/{adminId} {
+      allow read, write: if false;
+    }
+
+    match /test/connection {
+      allow get: if true;
+      allow list, write: if false;
+    }
+  }
+}

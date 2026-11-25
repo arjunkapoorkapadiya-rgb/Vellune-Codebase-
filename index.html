@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function () {
+        // Prevent third-party browser extensions (e.g. Similarweb frame_ant.js)
+        // from crashing when attempting to overwrite a getter-only window.fetch
+        try {
+          var currentFetch = window.fetch.bind(window);
+          Object.defineProperty(window, 'fetch', {
+            configurable: true,
+            enumerable: true,
+            get: function () {
+              return currentFetch;
+            },
+            set: function (fn) {
+              if (typeof fn === 'function') {
+                currentFetch = fn;
+              }
+            },
+          });
+        } catch (_e) {
+          // Ignore if environment locks property definition
+        }
+
+        window.addEventListener(
+          'error',
+          function (event) {
+            var filename = (event && event.filename) || '';
+            var msg = (event && event.message) || '';
+            if (
+              filename.indexOf('chrome-extension://') === 0 ||
+              filename.indexOf('moz-extension://') === 0 ||
+              msg.indexOf('Cannot set property fetch of #<Window>') !== -1 ||
+              msg.indexOf('signal is aborted without reason') !== -1
+            ) {
+              event.stopImmediatePropagation();
+              event.preventDefault();
+              return false;
+            }
+          },
+          true
+        );
+
+        window.addEventListener(
+          'unhandledrejection',
+          function (event) {
+            var reason = event && event.reason;
+            var msg =
+              (reason && (reason.message || String(reason))) || '';
+            var name = (reason && reason.name) || '';
+            if (
+              name === 'AbortError' ||
+              msg.indexOf('signal is aborted without reason') !== -1
+            ) {
+              event.stopImmediatePropagation();
+              event.preventDefault();
+              return false;
+            }
+          },
+          true
+        );
+      })();
+    </script>
+    <title>Vellune — Literary Criticism & Digital Publication</title>
+    <meta name="description" content="A youth-led literary criticism organisation and digital publication dedicated to literature, critical thinking, literary analysis, intellectual exchange, and emerging writers." />
+    <meta property="og:title" content="Vellune — Literary Criticism & Digital Publication" />
+    <meta property="og:description" content="A youth-led literary criticism organisation and digital publication dedicated to literature, critical thinking, literary analysis, intellectual exchange, and emerging writers." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&display=swap" rel="stylesheet">
+  </head>
+  <body class="bg-[#F8F6F1] text-[#292725] antialiased selection:bg-[#702F3B]/20 selection:text-[#702F3B] overflow-x-hidden">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

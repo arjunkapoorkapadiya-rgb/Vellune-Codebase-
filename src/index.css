@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-display: 'Cormorant Garamond', Georgia, serif;
+    --font-editorial: 'Cormorant Garamond', Georgia, serif;
+    --font-classic: 'Cormorant Garamond', Georgia, serif;
+    --font-avant: 'Cormorant Garamond', Georgia, serif;
+    --font-sans: 'EB Garamond', Georgia, serif;
+    --font-serif: 'EB Garamond', Georgia, Cambria, serif;
+    --font-mono: 'EB Garamond', Georgia, serif;
+
+    /* User's 12-Color Vellune Palette */
+    --color-porcelain: #F8F6F1;
+    --color-deep-plum: #514052;
+    --color-muted-mauve: #B49AA8;
+    --color-warm-grey: #B8B3AA;
+    --color-ink-black: #292725;
+    --color-pale-blush: #E9DCD8;
+    --color-warm-parchment: #F5F0E6;
+    --color-deep-burgundy: #702F3B;
+    --color-muted-sage: #9AA58B;
+    --color-espresso-brown: #493A32;
+    --color-dusty-rose: #C9A5A0;
+    --color-soft-white: #FFFCF7;
+  }
+
+  html, body {
+    font-family: var(--font-serif);
+    background-color: #F8F6F1;
+    color: #292725;
+    font-feature-settings: "kern" 1, "liga" 1;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, .font-display, .font-editorial, .font-classic, .font-avant {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+  }
+
+  .font-ui, .font-prose, .font-mono-num {
+    font-family: 'EB Garamond', Georgia, serif;
+    font-variant-numeric: oldstyle-nums;
+  }
+}
+
+.editorial-dropcap::first-letter {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  float: left;
+  font-size: 4.5rem;
+  line-height: 0.78;
+  padding-top: 0.15rem;
+  padding-right: 0.85rem;
+  padding-bottom: 0.1rem;
+  font-style: italic;
+  font-weight: 600;
+  color: #702F3B;
+}
+
+.rule-double-ink {
+  border-top: 3px solid #292725;
+  border-bottom: 1px solid #292725;
+  height: 6px;
+}
+
+.rule-double-bottom {
+  border-bottom: 4px double #292725;
+}
+
+.rule-double-top {
+  border-top: 4px double #292725;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

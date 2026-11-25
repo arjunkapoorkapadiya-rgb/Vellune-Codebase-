@@ -1,0 +1,6 @@
+{
+  "name": "Vellune — Literary Criticism & Digital Publication",
+  "description": "A youth-led literary criticism organisation and digital publication dedicated to literature, critical thinking, literary analysis, intellectual exchange, and emerging writers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
